@@ -106,7 +106,7 @@ brew install ffmpeg
 
 #### 4. 克隆本工具
 ```bash
-git clone https://github.com/new/makeotoini.git
+git clone https://github.com/tyy485/makeotoini.git
 cd makeotoini
 ```
 
@@ -153,7 +153,7 @@ sudo pacman -S ffmpeg
 
 #### 4. 克隆本工具
 ```bash
-git clone https://github.com/new/makeotoini.git
+git clone https://github.com/tyy485/makeotoini.git
 cd makeotoini
 ```
 
@@ -187,7 +187,7 @@ pkg install python ffmpeg
 
 #### 3. 克隆本工具
 ```bash
-git clone https://github.com/new/makeotoini.git
+git clone https://github.com/tyy485/makeotoini.git
 cd makeotoini
 ```
 
