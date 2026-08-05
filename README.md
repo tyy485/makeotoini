@@ -353,7 +353,7 @@ A: 当文件名中含有 `short`、`long`、`vowel` 等非标准罗马音标注�
 
 ## 📄 许可证
 
-MIT © [new](https://github.com/new)
+MIT © [new](https://github.com/tyy485)
 
 **完全开源，随便用，随便改，随便商用。**  
 如果你觉得好用，点个 ⭐ Star 就是对我最大的支持！
