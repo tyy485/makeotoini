@@ -11,7 +11,7 @@ import atexit
 import time
 from pathlib import Path
 
-VERSION = "3.7"
+VERSION = "3.8"
 
 class OtoGenerator:
     def __init__(self, wav_dir=None, output_path='oto.ini'):
@@ -40,6 +40,15 @@ class OtoGenerator:
         self.fix_romaji = False
         self.language = 'japanese'
         self.ui_language = 'zh'
+        self.generate_character = False
+        self.character_name = ''
+        self.character_version = ''
+        self.character_web = ''
+        self.character_image = ''
+        self.breath_alias_template = 'breath'
+        self.breath_counter = 0
+        self.breath_has_placeholder = False
+        self.breath_warned = False
         
         self.kana_to_romaji = {
             'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
@@ -123,12 +132,6 @@ class OtoGenerator:
                 'lang_zh': '中文',
                 'lang_ko': '한국어',
                 'lang_en': 'English',
-                'ui_language_select': '🌐 请选择工具界面语言',
-                'ui_zh': '1. 中文',
-                'ui_en': '2. English',
-                'ui_choice': '请输入语言序号 (1/2): ',
-                'ui_zh_done': '中文',
-                'ui_en_done': 'English',
                 'encoding_select': '📝 请选择你的oto编码',
                 'encoding_gb': '1. GB 2312',
                 'encoding_sjis': '2. Shift-JIS',
@@ -173,6 +176,13 @@ class OtoGenerator:
                 'silence_high_done': '高灵敏度 (阈值: {threshold})',
                 'silence_manual_input': '请输入阈值 (0.001-0.1): ',
                 'silence_manual_done': '已设置阈值: {threshold}',
+                'breath_alias_select': '🌬️  呼吸声别名模板',
+                'breath_alias_hint': '💡 使用 x 作为序号占位符，例如: breath_x → breath_1, breath_2...',
+                'breath_alias_examples': '   示例: breath_x, br{x}, b{x}, breath, br, b',
+                'breath_alias_input': '请输入呼吸声别名模板 (默认: breath): ',
+                'breath_alias_done': '呼吸声别名模板: {template}',
+                'breath_alias_warning': '⚠️  呼吸声别名模板中没有序号占位符 (x)，所有呼吸声将使用相同别名',
+                'breath_alias_warning2': '⚠️  第二次警告：呼吸声别名模板仍然没有 x，所有呼吸声将使用相同别名',
                 'alias_select': '🏷️  别名 (Alias) 自定义模式',
                 'alias_none': '1. 不使用别名处理 (直接用文件名)',
                 'alias_add_prefix': '2. 批量添加前缀 (如: x_)',
@@ -201,6 +211,25 @@ class OtoGenerator:
                 'romaji_fix_enabled': '已启用: 罗马音自动修复',
                 'romaji_fix_disabled': '已禁用: 罗马音自动修复',
                 'romaji_fix_skip': 'ℹ️  当前语言不支持罗马音修复，已自动禁用',
+                'character_select': '📋 声库信息文件 (character.txt) 生成',
+                'character_enable': '1. 启用生成 character.txt 和图标支持',
+                'character_disable': '2. 禁用 (不生成)',
+                'character_choice': '请选择 (1/2): ',
+                'character_enabled': '已启用: 生成声库信息文件',
+                'character_disabled': '已禁用: 不生成声库信息文件',
+                'character_name_input': '请输入歌手名称 (name): ',
+                'character_name_done': '歌手名称: {name}',
+                'character_version_input': '请输入版本号 (version，留空跳过): ',
+                'character_version_done': '版本号: {version}',
+                'character_web_input': '请输入网站 (web，留空跳过): ',
+                'character_web_done': '网站: {web}',
+                'character_image_select': '📷 声库图标选择',
+                'character_image_hint': '请将图标文件放在音源目录下，或输入完整路径',
+                'character_image_input': '请输入图标文件名或路径 (留空跳过): ',
+                'character_image_found': '找到 {count} 个图片文件:',
+                'character_image_choice': '请选择序号 (1-{count}): ',
+                'character_image_done': '已选择图标: {image}',
+                'character_image_skip': '未选择图标',
                 'ffmpeg_ready': '✅ FFmpeg 已就绪，支持自动转换音频格式',
                 'ffmpeg_missing': '⚠️  FFmpeg 未安装，只支持wav格式',
                 'ffmpeg_hint': '💡 建议安装FFmpeg以支持更多音频格式',
@@ -231,12 +260,14 @@ class OtoGenerator:
                 'abnormal_auto_empty': '⚠️  清洗后文件名为空，跳过: {filename}',
                 'abnormal_skip_all': '⏭️  跳过异常文件: {filename}',
                 'processed': '✅ 已处理: {filename} (别名: {alias}, 时长: {duration}ms, 静音: {silence}ms, offset: {offset}ms)',
+                'breath_detected': '   🌬️  呼吸声文件: {filename} -> 别名: {alias}',
                 'romaji_fix': '   🔧 修复罗马音: {old} -> {new}',
                 'no_wav': '❌ 没有可用的wav文件！',
                 'generate_success': '✅ oto.ini 已生成: {path}',
                 'generate_count': '📊 共 {count} 条配置',
                 'generate_encoding': '🔤 编码格式: {encoding}',
                 'generate_fail': '❌ 生成失败: {error}',
+                'character_generated': '✅ character.txt 已生成: {path}',
                 'cleanup_temp': '🧹 清理临时wav文件...',
                 'cleanup_deleted': '   ✅ 删除: {filename}',
                 'cleanup_fail': '   ❌ 删除失败: {filename} - {error}',
@@ -287,12 +318,6 @@ class OtoGenerator:
                 'lang_zh': 'Chinese',
                 'lang_ko': 'Korean',
                 'lang_en': 'English',
-                'ui_language_select': '🌐 Select UI language',
-                'ui_zh': '1. 中文',
-                'ui_en': '2. English',
-                'ui_choice': 'Enter language number (1/2): ',
-                'ui_zh_done': 'Chinese',
-                'ui_en_done': 'English',
                 'encoding_select': '📝 Select your oto encoding',
                 'encoding_gb': '1. GB 2312',
                 'encoding_sjis': '2. Shift-JIS',
@@ -337,6 +362,13 @@ class OtoGenerator:
                 'silence_high_done': 'High sensitivity (threshold: {threshold})',
                 'silence_manual_input': 'Enter threshold (0.001-0.1): ',
                 'silence_manual_done': 'Threshold set: {threshold}',
+                'breath_alias_select': '🌬️  Breath alias template',
+                'breath_alias_hint': '💡 Use x as placeholder for number, e.g.: breath_x → breath_1, breath_2...',
+                'breath_alias_examples': '   Examples: breath_x, br{x}, b{x}, breath, br, b',
+                'breath_alias_input': 'Enter breath alias template (default: breath): ',
+                'breath_alias_done': 'Breath alias template: {template}',
+                'breath_alias_warning': '⚠️  No number placeholder (x) in breath alias template, all breaths will use same alias',
+                'breath_alias_warning2': '⚠️  Second warning: Still no x in breath alias template, all breaths will use same alias',
                 'alias_select': '🏷️  Alias custom mode',
                 'alias_none': '1. No alias processing (use filename directly)',
                 'alias_add_prefix': '2. Add prefix (e.g.: x_)',
@@ -365,6 +397,25 @@ class OtoGenerator:
                 'romaji_fix_enabled': 'Enabled: Romaji auto fix',
                 'romaji_fix_disabled': 'Disabled: Romaji auto fix',
                 'romaji_fix_skip': 'ℹ️  Current language does not support romaji fix, disabled automatically',
+                'character_select': '📋 character.txt generation',
+                'character_enable': '1. Enable character.txt and icon support',
+                'character_disable': '2. Disable (do not generate)',
+                'character_choice': 'Select (1/2): ',
+                'character_enabled': 'Enabled: Generate character info file',
+                'character_disabled': 'Disabled: Do not generate character info file',
+                'character_name_input': 'Enter singer name (name): ',
+                'character_name_done': 'Singer name: {name}',
+                'character_version_input': 'Enter version (version, leave blank to skip): ',
+                'character_version_done': 'Version: {version}',
+                'character_web_input': 'Enter website (web, leave blank to skip): ',
+                'character_web_done': 'Website: {web}',
+                'character_image_select': '📷 Voicebank icon selection',
+                'character_image_hint': 'Place icon file in voicebank directory, or enter full path',
+                'character_image_input': 'Enter icon filename or path (leave blank to skip): ',
+                'character_image_found': 'Found {count} image files:',
+                'character_image_choice': 'Select number (1-{count}): ',
+                'character_image_done': 'Selected icon: {image}',
+                'character_image_skip': 'No icon selected',
                 'ffmpeg_ready': '✅ FFmpeg ready, supports auto audio conversion',
                 'ffmpeg_missing': '⚠️  FFmpeg not installed, only wav format supported',
                 'ffmpeg_hint': '💡 Install FFmpeg for more audio formats',
@@ -395,12 +446,14 @@ class OtoGenerator:
                 'abnormal_auto_empty': '⚠️  Empty filename after cleaning, skipped: {filename}',
                 'abnormal_skip_all': '⏭️  Skipped abnormal file: {filename}',
                 'processed': '✅ Processed: {filename} (alias: {alias}, duration: {duration}ms, silence: {silence}ms, offset: {offset}ms)',
+                'breath_detected': '   🌬️  Breath file: {filename} -> alias: {alias}',
                 'romaji_fix': '   🔧 Fixed romaji: {old} -> {new}',
                 'no_wav': '❌ No wav files available!',
                 'generate_success': '✅ oto.ini generated: {path}',
                 'generate_count': '📊 {count} entries',
                 'generate_encoding': '🔤 Encoding: {encoding}',
                 'generate_fail': '❌ Generation failed: {error}',
+                'character_generated': '✅ character.txt generated: {path}',
                 'cleanup_temp': '🧹 Cleaning temporary wav files...',
                 'cleanup_deleted': '   ✅ Deleted: {filename}',
                 'cleanup_fail': '   ❌ Delete failed: {filename} - {error}',
@@ -515,25 +568,25 @@ class OtoGenerator:
     
     def select_ui_language(self):
         print("\n" + "="*60)
-        print(self.t('ui_language_select'))
+        print("🌐 请选择工具界面语言 / Select UI language")
         print("="*60)
-        print(self.t('ui_zh'))
-        print(self.t('ui_en'))
+        print("  1. 中文")
+        print("  2. English")
         print("="*60)
         
         while True:
-            choice = input(self.t('ui_choice')).strip()
+            choice = input("请输入语言序号 / Enter language number (1/2): ").strip()
             
             if choice == '1' or choice.lower() in ['zh', '中文']:
                 self.ui_language = 'zh'
-                print(f"✅ {self.t('ui_zh_done')}")
+                print("✅ 已选择: 中文")
                 return
             elif choice == '2' or choice.lower() in ['en', 'english']:
                 self.ui_language = 'en'
-                print(f"✅ {self.t('ui_en_done')}")
+                print("✅ Selected: English")
                 return
             else:
-                print(self.t('invalid_choice', range='1 或 2'))
+                print("❌ 无效选择，请输入 1 或 2 / Invalid choice, enter 1 or 2")
                 continue
     
     def select_language(self):
@@ -734,6 +787,37 @@ class OtoGenerator:
                 print(self.t('invalid_choice', range='1、2、3 或 4'))
                 continue
     
+    def select_breath_alias(self):
+        print("\n" + "="*60)
+        print(self.t('breath_alias_select'))
+        print("="*60)
+        print(self.t('breath_alias_hint'))
+        print(self.t('breath_alias_examples'))
+        print("="*60)
+        
+        while True:
+            template = input(self.t('breath_alias_input')).strip()
+            if template == '':
+                template = 'breath'
+            
+            self.breath_alias_template = template
+            
+            if 'x' in template or '{x}' in template or '<x>' in template:
+                self.breath_has_placeholder = True
+                self.breath_warned = True
+                print(f"✅ {self.t('breath_alias_done', template=template)}")
+                return
+            else:
+                if not self.breath_warned:
+                    print(self.t('breath_alias_warning'))
+                    self.breath_warned = True
+                    continue
+                else:
+                    print(self.t('breath_alias_warning2'))
+                    self.breath_has_placeholder = False
+                    print(f"✅ {self.t('breath_alias_done', template=template)}")
+                    return
+    
     def select_alias_mode(self):
         print("\n" + "="*60)
         print(self.t('alias_select'))
@@ -833,6 +917,127 @@ class OtoGenerator:
         else:
             self.fix_romaji = False
             print(self.t('romaji_fix_skip'))
+    
+    def select_character_generation(self):
+        print("\n" + "="*60)
+        print(self.t('character_select'))
+        print("="*60)
+        print(self.t('character_enable'))
+        print(self.t('character_disable'))
+        print("="*60)
+        
+        while True:
+            choice = input(self.t('character_choice')).strip()
+            
+            if choice == '1':
+                self.generate_character = True
+                print(f"✅ {self.t('character_enabled')}")
+                
+                name = input(self.t('character_name_input')).strip()
+                if name:
+                    self.character_name = name
+                    print(f"✅ {self.t('character_name_done', name=name)}")
+                else:
+                    self.character_name = ''
+                    print("⚠️  歌手名称未填写，将跳过此字段")
+                
+                version = input(self.t('character_version_input')).strip()
+                if version:
+                    self.character_version = version
+                    print(f"✅ {self.t('character_version_done', version=version)}")
+                else:
+                    self.character_version = ''
+                
+                web = input(self.t('character_web_input')).strip()
+                if web:
+                    self.character_web = web
+                    print(f"✅ {self.t('character_web_done', web=web)}")
+                else:
+                    self.character_web = ''
+                
+                self.select_character_image()
+                return
+            elif choice == '2':
+                self.generate_character = False
+                print(f"✅ {self.t('character_disabled')}")
+                return
+            else:
+                print(self.t('invalid_choice', range='1 或 2'))
+                continue
+    
+    def select_character_image(self):
+        print("\n" + "="*60)
+        print(self.t('character_image_select'))
+        print("="*60)
+        print(self.t('character_image_hint'))
+        
+        image_extensions = ('.png', '.bmp', '.jpg', '.jpeg', '.gif', '.tiff', '.webp')
+        image_files = []
+        
+        if self.wav_dir and os.path.exists(self.wav_dir):
+            for file in os.listdir(self.wav_dir):
+                if file.lower().endswith(image_extensions):
+                    image_files.append(file)
+        
+        if image_files:
+            print(self.t('character_image_found', count=len(image_files)))
+            for i, img in enumerate(image_files, 1):
+                print(f"   {i}. {img}")
+            
+            while True:
+                try:
+                    choice = input(self.t('character_image_choice', count=len(image_files))).strip()
+                    if choice == '':
+                        self.character_image = ''
+                        print(self.t('character_image_skip'))
+                        return
+                    idx = int(choice) - 1
+                    if 0 <= idx < len(image_files):
+                        self.character_image = image_files[idx]
+                        print(f"✅ {self.t('character_image_done', image=self.character_image)}")
+                        return
+                    else:
+                        print(f"❌ 请输入 1-{len(image_files)} 之间的数字")
+                except ValueError:
+                    print(self.t('invalid_number'))
+        else:
+            print("📷 未在音源目录找到图片文件")
+            while True:
+                custom_path = input(self.t('character_image_input')).strip()
+                if custom_path == '':
+                    self.character_image = ''
+                    print(self.t('character_image_skip'))
+                    return
+                if os.path.exists(custom_path):
+                    self.character_image = custom_path
+                    print(f"✅ {self.t('character_image_done', image=custom_path)}")
+                    return
+                else:
+                    print(f"❌ 文件不存在: {custom_path}")
+    
+    def is_breath_file(self, filename):
+        base_name = os.path.splitext(filename)[0].lower()
+        breath_patterns = ['br', '呼', '吸', 'breathe', 'breath']
+        for pattern in breath_patterns:
+            if pattern in base_name:
+                return True
+        if re.match(r'^b\d+$', base_name):
+            return True
+        return False
+    
+    def get_breath_alias(self):
+        self.breath_counter += 1
+        template = self.breath_alias_template
+        
+        if self.breath_has_placeholder:
+            template = template.replace('{x}', str(self.breath_counter))
+            template = template.replace('<x>', str(self.breath_counter))
+            template = template.replace('x', str(self.breath_counter))
+        else:
+            if self.breath_counter > 1:
+                template = template + str(self.breath_counter)
+        
+        return template
     
     def extract_kana(self, text):
         kana_pattern = re.compile(
@@ -973,8 +1178,11 @@ class OtoGenerator:
         
         return new_name
     
-    def apply_alias(self, filename):
+    def apply_alias(self, filename, is_breath=False):
         base_name = os.path.splitext(filename)[0]
+        
+        if is_breath:
+            return self.get_breath_alias()
         
         if self.fix_romaji and self.language in ['japanese', 'korean']:
             base_name = self.fix_romaji_in_filename(base_name)
@@ -1265,8 +1473,19 @@ class OtoGenerator:
             return 500
     
     def estimate_oto_params(self, wav_path):
+        filename = os.path.basename(wav_path)
         duration = self.get_wav_duration(wav_path)
         silence = self.detect_silence(wav_path)
+        
+        if self.is_breath_file(filename):
+            return {
+                'offset': silence,
+                'consonant': 0,
+                'cutoff': duration,
+                'preutterance': 0,
+                'overlap': 0,
+                'is_breath': True
+            }
         
         effective_duration = duration - silence
         
@@ -1276,7 +1495,8 @@ class OtoGenerator:
                 'consonant': max(20, int(effective_duration * 0.15)),
                 'cutoff': max(50, int(effective_duration * 0.5)),
                 'preutterance': max(30, int(effective_duration * 0.2)),
-                'overlap': max(20, int(effective_duration * 0.1))
+                'overlap': max(20, int(effective_duration * 0.1)),
+                'is_breath': False
             }
         elif effective_duration < 500:
             params = {
@@ -1284,7 +1504,8 @@ class OtoGenerator:
                 'consonant': max(50, int(effective_duration * 0.2)),
                 'cutoff': max(100, int(effective_duration * 0.4)),
                 'preutterance': max(60, int(effective_duration * 0.25)),
-                'overlap': max(30, int(effective_duration * 0.12))
+                'overlap': max(30, int(effective_duration * 0.12)),
+                'is_breath': False
             }
         else:
             params = {
@@ -1292,7 +1513,8 @@ class OtoGenerator:
                 'consonant': max(80, int(effective_duration * 0.15)),
                 'cutoff': max(150, int(effective_duration * 0.35)),
                 'preutterance': max(80, int(effective_duration * 0.2)),
-                'overlap': max(40, int(effective_duration * 0.1))
+                'overlap': max(40, int(effective_duration * 0.1)),
+                'is_breath': False
             }
         
         params['consonant'] = min(params['consonant'], effective_duration // 2)
@@ -1409,12 +1631,20 @@ class OtoGenerator:
                     continue
             
             params = self.estimate_oto_params(wav_path)
-            alias = self.apply_alias(filename)
+            is_breath = params.get('is_breath', False)
+            alias = self.apply_alias(filename, is_breath)
+            
+            if is_breath:
+                print(self.t('breath_detected', filename=filename, alias=alias))
             
             self.notes.append({
                 'filename': filename,
                 'alias': alias,
-                **params
+                'offset': params['offset'],
+                'consonant': params['consonant'],
+                'cutoff': params['cutoff'],
+                'preutterance': params['preutterance'],
+                'overlap': params['overlap']
             })
             
             duration = self.get_wav_duration(wav_path)
@@ -1448,6 +1678,27 @@ class OtoGenerator:
             print(self.t('generate_fail', error=e))
             return False
     
+    def generate_character_file(self):
+        if not self.generate_character:
+            return
+        
+        character_path = os.path.join(self.wav_dir, 'character.txt')
+        
+        try:
+            with open(character_path, 'w', encoding='utf-8') as f:
+                if self.character_name:
+                    f.write(f'name={self.character_name}\n')
+                if self.character_version:
+                    f.write(f'version={self.character_version}\n')
+                if self.character_web:
+                    f.write(f'web={self.character_web}\n')
+                if self.character_image:
+                    f.write(f'image={self.character_image}\n')
+            
+            print(f"\n{self.t('character_generated', path=os.path.abspath(character_path))}")
+        except Exception as e:
+            print(f"❌ 生成 character.txt 失败: {e}")
+    
     def cleanup_temp_files(self):
         if self.cleanup_done:
             return
@@ -1464,6 +1715,8 @@ class OtoGenerator:
     
     def run(self):
         try:
+            self.select_ui_language()
+            
             print("="*60)
             print(self.t('title', version=VERSION))
             print("="*60)
@@ -1471,8 +1724,6 @@ class OtoGenerator:
             print(self.t('loading'))
             print(self.t('loading_done'))
             print(self.t('loading_mood'))
-            
-            self.select_ui_language()
             
             print(self.t('detecting'))
             self.detect_platform()
@@ -1484,8 +1735,10 @@ class OtoGenerator:
             self.select_reconvert_mode()
             self.select_scan_mode()
             self.select_silence_threshold()
+            self.select_breath_alias()
             self.select_alias_mode()
             self.select_romaji_fix()
+            self.select_character_generation()
             
             self.check_ffmpeg()
             self.check_ffprobe()
@@ -1553,12 +1806,15 @@ class OtoGenerator:
             
             self.output_path = os.path.join(self.wav_dir, 'oto.ini')
             self.generate_oto()
+            self.generate_character_file()
             
             self.cleanup_temp_files()
             
             print("\n" + "="*60)
             print(self.t('complete'))
             print(self.t('complete_path', path=os.path.abspath(self.output_path)))
+            if self.generate_character:
+                print(f"📋 character.txt 位置: {os.path.join(self.wav_dir, 'character.txt')}")
             print(self.t('complete_hint'))
             print("="*60)
             return True
