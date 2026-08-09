@@ -1,0 +1,478 @@
+# 🎵 makeotoini — UTAU OTO.ini Smart Generator
+
+> Drag your audio folder in, generate oto.ini with one click. Supports auto-transcoding, silence detection, batch alias processing, and multilingual voicebank support.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20Android-lightgrey)](https://github.com/tyy485/makeotoini)
+
+---
+
+## 📖 Table of Contents
+
+- [✨ Features](#-features)
+- [📦 Installation & Running](#-installation--running)
+  - [🪟 Windows Users](#-windows-users)
+  - [🍎 macOS Users](#-macos-users)
+  - [🐧 Linux Users](#-linux-users)
+  - [📱 Termux (Android) Users](#-termux-android-users)
+- [🚀 Usage Guide](#-usage-guide)
+  - [📋 Complete Interactive Flow Example](#-complete-interactive-flow-example)
+- [🛠️ Configuration Options](#️-configuration-options)
+- [📁 Output Example](#-output-example)
+- [📁 Project Structure](#-project-structure)
+- [❓ FAQ](#-faq)
+- [🤝 Contributing](#-contributing)
+- [📄 License](#-license)
+- [💬 Credits](#-credits)
+
+---
+
+## ✨ Features
+
+- 🎯 **One-click generation** — Scan .wav files, auto-estimate parameters, output standard oto.ini
+- 🔄 **Auto-transcoding** — Convert MP3 / FLAC / M4A / OGG etc. to .wav automatically (requires FFmpeg)
+- 📦 **Zero dependencies** — Uses only Python standard library; no `pip install` needed
+- 🧹 **Abnormal filename cleaning** — Remove invisible characters to avoid UTAU errors
+- 🏷️ **Batch alias processing** — Add/remove prefixes/suffixes, delete character ranges – 6 modes available
+- 🔇 **Silence detection** — Automatically locate offset to reduce breath-cut errors
+- 🔧 **Romaji auto-fix** — Correct common labels like `short`/`long`/`vowel` to standard Romaji (supports Japanese Kana and Korean Hangul)
+- 🌍 **Multilingual voicebank support** — Choose from 日本語 / 中文 / 한국어 / English
+- 🌐 **Bilingual UI** — Interface supports Chinese/English toggle
+- 🌍 **Cross-platform** — Works on Windows / macOS / Linux / Termux (Android)
+- 🔤 **Encoding options** — Choose Shift-JIS / GB2312 / UTF-8 as needed
+
+---
+
+## 📦 Installation & Running
+
+### 🪟 Windows Users
+
+#### 1. Install Python (if not already)
+- Visit [python.org/downloads](https://www.python.org/downloads/)
+- Download the latest Python (click the yellow Download button)
+- **During installation, make sure to check `Add Python to PATH`** (very important!)
+- Click `Next` to complete installation
+
+#### 2. Verify Python is installed
+Open Command Prompt (`Win+R` → type `cmd` → Enter), then run:
+```bash
+python --version
+```
+If you see `Python 3.x.x`, it's installed correctly.
+
+#### 3. Install FFmpeg (only needed for transcoding MP3/FLAC etc.)
+> 💡 If all your audio files are `.wav`, **you can skip this step**
+
+- Download the Windows version from [ffmpeg.org/download.html](https://ffmpeg.org/download.html)
+- Extract to `C:\ffmpeg`
+- Add `C:\ffmpeg\bin` to your system PATH:
+  1. Right-click "This PC" → "Properties" → "Advanced system settings"
+  2. Click "Environment Variables" → find `Path` under "System variables" → double-click
+  3. Click "New" → enter `C:\ffmpeg\bin` → OK
+
+#### 4. Download this tool
+- Click the green `Code` button (top-right) → `Download ZIP`
+- Extract to where you want (e.g., `D:\oto_voice\`)
+
+#### 5. Run
+Type `cmd` in the folder address bar and press Enter, then run:
+```bash
+python make_oto.py
+```
+
+#### 6. If you see `python is not recognized as an internal or external command`
+Python was not added to PATH. **Reinstall Python and check `Add Python to PATH`**.
+
+---
+
+### 🍎 macOS Users
+
+#### 1. Install Python (if not already)
+```bash
+# Using Homebrew (recommended)
+brew install python
+
+# Or download the installer from python.org
+```
+
+#### 2. Verify Python is installed
+```bash
+python3 --version
+```
+If you see `Python 3.x.x`, it's ready.
+
+#### 3. Install FFmpeg (for transcoding)
+```bash
+brew install ffmpeg
+```
+
+#### 4. Clone this tool
+```bash
+git clone https://github.com/tyy485/makeotoini.git
+cd makeotoini
+```
+
+#### 5. Run
+```bash
+python3 make_oto.py
+```
+
+> 💡 On macOS, always use `python3` because the system-built Python is Python 2 (deprecated).
+
+---
+
+### 🐧 Linux Users
+
+#### 1. Install Python (if not already)
+```bash
+# Ubuntu/Debian
+sudo apt update
+sudo apt install python3
+
+# Fedora
+sudo dnf install python3
+
+# Arch
+sudo pacman -S python
+```
+
+#### 2. Verify Python is installed
+```bash
+python3 --version
+```
+
+#### 3. Install FFmpeg (for transcoding)
+```bash
+# Ubuntu/Debian
+sudo apt install ffmpeg
+
+# Fedora
+sudo dnf install ffmpeg
+
+# Arch
+sudo pacman -S ffmpeg
+```
+
+#### 4. Clone this tool
+```bash
+git clone https://github.com/tyy485/makeotoini.git
+cd makeotoini
+```
+
+#### 5. Run
+```bash
+python3 make_oto.py
+```
+
+#### 6. Optional: Make it a global command (run `makeotoini` from anywhere)
+```bash
+chmod +x make_oto.py
+sudo ln -s $(pwd)/make_oto.py /usr/local/bin/makeotoini
+makeotoini   # Now you can run it from any directory!
+```
+
+---
+
+### 📱 Termux (Android) Users
+
+> Run Python on your phone to generate oto.ini – great for when you don't have a computer.
+
+#### 1. Install Termux
+- Download Termux from F-Droid (**not** from Google Play – it's outdated)
+- Open Termux
+
+#### 2. Install Python and FFmpeg
+```bash
+pkg update
+pkg install python ffmpeg
+```
+
+#### 3. Clone this tool
+```bash
+git clone https://github.com/tyy485/makeotoini.git
+cd makeotoini
+```
+
+#### 4. Run
+```bash
+python make_oto.py
+```
+
+> 💡 Audio files on your phone are usually in `/sdcard/`. In Termux, you can access them via `~/storage/shared/`.
+
+---
+
+## 🚀 Usage Guide
+
+### Quick Start
+
+1. Place your audio files (.wav / .mp3 / .flac etc.) in a folder
+2. Run `python make_oto.py` (or `python3` on macOS/Linux)
+3. Follow the prompts to select UI language, voicebank language, encoding, processing mode, alias rules, etc.
+4. The generated `oto.ini` will appear in the same folder
+
+### 📋 Complete Interactive Flow Example
+
+```
+============================================================
+🎵 OTO.ini Smart Generator v3.7 (with Audio Conversion)
+============================================================
+
+Generator loading…
+Generator loaded, loading encoding selector…
+Loading your good mood…
+
+============================================================
+🌐 Select UI language
+============================================================
+  1. 中文
+  2. English
+============================================================
+Enter language number (1/2): 2
+✅ English
+
+Detecting your software…
+💻 竟然是CMD，来吧，进我的生成器
+
+============================================================
+🌍 Select voicebank language
+============================================================
+  1. 日本語 (Japanese)
+  2. 中文 (Chinese)
+  3. 한국어 (Korean)
+  4. English
+============================================================
+Enter language number (1/2/3/4): 1
+✅ Japanese
+
+============================================================
+📝 Select your oto encoding
+============================================================
+  1. GB 2312
+  2. Shift-JIS
+============================================================
+Enter encoding number: 2
+✅ Shift-JIS encoding
+
+============================================================
+🧹 Abnormal filename handling mode
+============================================================
+  1. Ask one by one (for small batches)
+  2. Auto clean all
+  3. Skip all
+============================================================
+Select mode (1/2/3): 2
+✅ Auto clean all
+
+============================================================
+📦 Converted file handling mode
+============================================================
+  1. Keep converted wav files permanently
+  2. Temporary conversion, delete after generating oto
+============================================================
+Select mode (1/2): 2
+✅ Temporary conversion mode
+
+============================================================
+🔄 Conversion mode
+============================================================
+  1. Force reconvert (overwrite existing wav)
+  2. Reuse existing wav (faster)
+============================================================
+Select mode (1/2): 2
+✅ Reuse existing wav
+
+============================================================
+📂 Scan mode
+============================================================
+  1. Recursive scan subfolders
+  2. Scan current directory only
+============================================================
+Select mode (1/2): 1
+✅ Recursive scan
+
+============================================================
+🎚️  Silence detection sensitivity
+============================================================
+  1. Low (0.02) - for loud recordings
+  2. Medium (0.01) - for normal recordings [default]
+  3. High (0.005) - for quiet recordings
+  4. Manual input (0.001-0.1)
+============================================================
+Select sensitivity (1/2/3/4): 2
+✅ Medium sensitivity (threshold: 0.01)
+
+============================================================
+🏷️  Alias custom mode
+============================================================
+  1. No alias processing (use filename directly)
+  2. Add prefix (e.g.: x_)
+  3. Remove prefix (e.g.: remove x_)
+  4. Remove suffix (e.g.: remove _x)
+  5. Add suffix (e.g.: _x)
+  6. Remove character range (e.g.: remove 1st-3rd chars)
+============================================================
+Select alias mode (1/2/3/4/5/6): 1
+✅ No alias processing
+
+============================================================
+🔧 Romaji auto fix
+============================================================
+  1. Enable auto fix (replace short/long with correct romaji)
+  2. Disable auto fix
+============================================================
+Select (1/2): 1
+✅ Enabled: Romaji auto fix
+
+✅ FFmpeg ready, supports auto audio conversion
+
+📁 Default directory: D:\oto_voice
+
+📂 Scanning: D:\oto_voice
+📊 Found 50 files
+------------------------------------------------------------
+🔍 Scanning: 50/50
+✅ Scan complete: found 50 wav files
+
+🔧 Processing 50 wav files
+------------------------------------------------------------
+
+[1/50] Processing: あ_i.wav
+✅ Processed: あ_i.wav (alias: i, duration: 1200ms, silence: 120ms, offset: 120ms)
+
+[2/50] Processing: か_ka.wav
+✅ Processed: か_ka.wav (alias: ka, duration: 950ms, silence: 80ms, offset: 80ms)
+
+... (similar for remaining files)
+
+✅ oto.ini generated: D:\oto_voice\oto.ini
+📊 50 entries
+🔤 Encoding: shift-jis
+
+============================================================
+✨ Generation complete!
+📁 oto.ini location: D:\oto_voice\oto.ini
+💡 Place this file with audio files in the same directory for UTAU
+============================================================
+```
+
+Follow the on-screen prompts – **all interactions are in Chinese/English based on your selection**. No programming knowledge required.
+
+### Folder Structure Suggestion
+
+```
+your_voice_folder/
+├── あ_i.wav
+├── い_u.wav
+├── か_ka.wav
+├── make_oto.py   ← Place the tool here (or anywhere, and specify the path when running)
+└── oto.ini       ← Generated automatically here
+```
+
+---
+
+## 🛠️ Configuration Options
+
+| Option | Description |
+|--------|-------------|
+| **UI Language** | Chinese / English – display language of the tool interface |
+| **Voicebank Language** | 日本語 / 中文 / 한국어 / English – script recognition for Romaji auto-fix |
+| **Encoding** | Shift-JIS (UTAU default) / GB2312 / UTF-8 – choose as needed |
+| **Abnormal filename handling** | Ask one by one / Auto clean / Skip all – useful for filenames with invisible characters |
+| **Conversion mode** | Keep permanently / Temporary (delete after generation to save space) |
+| **Alias mode** | 6 modes: none / add prefix / remove prefix / add suffix / remove suffix / delete character range |
+| **Silence sensitivity** | Low / Medium / High – choose lower sensitivity for recordings with background noise |
+| **Scan mode** | Recursive scan (subfolders included) / Current directory only |
+| **Romaji auto-fix** | Automatically corrects labels like `short`/`long`/`vowel` to standard Romaji, supports Japanese Kana and Korean Hangul |
+
+---
+
+## 📁 Output Example
+
+```ini
+[#VERSION]
+VERSION=100
+
+あ_i.wav=i,0,362,844,482,241
+い_u.wav=u,0,334,780,445,222
+か_ka.wav=ka,0,362,844,482,241
+き_ki.wav=ki,0,348,812,464,232
+く_ku.wav=ku,0,320,747,427,213
+```
+
+Parameter meanings (left to right):
+- `Alias` – The name shown in UTAU
+- `offset` – Milliseconds skipped from the beginning (silence)
+- `consonant` – Consonant duration
+- `blank` – Blank section duration
+- `preutterance` – Pre-utterance time
+- `overlap` – Crossfade time
+
+---
+
+## 📁 Project Structure
+
+```
+makeotoini/
+├── make_oto.py      # Main program – run this
+├── README.md
+├── README_EN.md
+└── LICENSE
+```
+
+---
+
+## ❓ FAQ
+
+**Q: It says FFmpeg not found?**  
+A: If all your audio files are `.wav`, you **don't need FFmpeg at all** – just run the tool. If you need to convert MP3/FLAC etc., please install FFmpeg following the instructions above.
+
+**Q: Can it handle Chinese filenames?**  
+A: Yes, but we recommend using English/Japanese/Korean/Romaji naming instead – UTAU has limited support for Chinese, and there's a higher risk of garbled output.
+
+**Q: Do I need to manually adjust the generated parameters?**  
+A: The tool generates "workable" parameters – they'll produce sound immediately. For perfect quality, tuners can fine-tune them later.
+
+**Q: Does it support batch processing of subfolders?**  
+A: Yes! Select "Recursive scan" when prompted.
+
+**Q: Can this tool be used with UTAU-Synth?**  
+A: Yes, the oto.ini format is universal.
+
+**Q: Why does my oto.ini show garbled text when I open it?**  
+A: You chose the wrong encoding. UTAU defaults to Shift-JIS – open the file with an editor that supports that encoding (e.g. Notepad++).
+
+**Q: What does Romaji auto-fix do?**  
+A: When filenames contain non-standard labels like `short`, `long`, `vowel`, the tool automatically corrects them to standard forms like `q`, `-`, etc., so UTAU can recognise them correctly. Currently supports Japanese Kana (Hiragana/Katakana) and Korean Hangul.
+
+**Q: What's the difference between UI language and voicebank language?**  
+A: UI language controls the display language of the tool itself (Chinese or English). Voicebank language controls which script the Romaji auto-fix feature recognizes (Japanese Kana or Korean Hangul).
+
+---
+
+## 🤝 Contributing
+
+Issues, PRs, and forks are all welcome!
+
+If you have good ideas, feel free to reach out.
+
+---
+
+## 📄 License
+
+MIT © [tyy485](https://github.com/tyy485)
+
+**Fully open source – use it freely, modify it, sell it, do whatever you like.**  
+If you find it useful, a ⭐ Star would mean a lot!
+
+---
+
+## 💬 Credits
+
+- The UTAU community – all tuners and voicebank creators
+- Everyone who suggested features and helped with testing
+
+---
+
+**Happy Tuning! 🎶**
