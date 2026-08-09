@@ -1,6 +1,6 @@
 # 🎵 makeotoini — UTAU OTO.ini Smart Generator
 
-> Drag your audio folder in, generate oto.ini with one click. Supports auto-transcoding, silence detection, batch alias processing, and multilingual voicebank support.
+> Drag your audio folder in, generate oto.ini with one click. Supports auto-transcoding, silence detection, batch alias processing, multilingual voicebank, character.txt generation, and breath file auto-identification.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.6+](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/)
@@ -12,12 +12,7 @@
 
 - [✨ Features](#-features)
 - [📦 Installation & Running](#-installation--running)
-  - [🪟 Windows Users](#-windows-users)
-  - [🍎 macOS Users](#-macos-users)
-  - [🐧 Linux Users](#-linux-users)
-  - [📱 Termux (Android) Users](#-termux-android-users)
 - [🚀 Usage Guide](#-usage-guide)
-  - [📋 Complete Interactive Flow Example](#-complete-interactive-flow-example)
 - [🛠️ Configuration Options](#️-configuration-options)
 - [📁 Output Example](#-output-example)
 - [📁 Project Structure](#-project-structure)
@@ -36,9 +31,11 @@
 - 🧹 **Abnormal filename cleaning** — Remove invisible characters to avoid UTAU errors
 - 🏷️ **Batch alias processing** — Add/remove prefixes/suffixes, delete character ranges – 6 modes available
 - 🔇 **Silence detection** — Automatically locate offset to reduce breath-cut errors
+- 🌬️ **Breath file auto-identification** — Automatically detects files named with `br`/`呼`/`吸`/`breathe`/`breath` or `b+number`, assigns aliases with custom template (supports `x` placeholder for numbering)
 - 🔧 **Romaji auto-fix** — Correct common labels like `short`/`long`/`vowel` to standard Romaji (supports Japanese Kana and Korean Hangul)
 - 🌍 **Multilingual voicebank support** — Choose from 日本語 / 中文 / 한국어 / English
 - 🌐 **Bilingual UI** — Interface supports Chinese/English toggle
+- 📋 **character.txt generation** — Interactive generation of voicebank info file with name, version, website, icon (auto-scans directory images)
 - 🌍 **Cross-platform** — Works on Windows / macOS / Linux / Termux (Android)
 - 🔤 **Encoding options** — Choose Shift-JIS / GB2312 / UTF-8 as needed
 
@@ -209,28 +206,28 @@ python make_oto.py
 
 1. Place your audio files (.wav / .mp3 / .flac etc.) in a folder
 2. Run `python make_oto.py` (or `python3` on macOS/Linux)
-3. Follow the prompts to select UI language, voicebank language, encoding, processing mode, alias rules, etc.
-4. The generated `oto.ini` will appear in the same folder
+3. Follow the prompts to select UI language, voicebank language, encoding, processing mode, breath alias template, alias rules, character.txt generation, etc.
+4. The generated `oto.ini` and `character.txt` (if enabled) will appear in the same folder
 
 ### 📋 Complete Interactive Flow Example
 
 ```
 ============================================================
-🎵 OTO.ini Smart Generator v3.7 (with Audio Conversion)
+🌐 请选择工具界面语言 / Select UI language
+============================================================
+  1. 中文
+  2. English
+============================================================
+请输入语言序号 / Enter language number (1/2): 2
+✅ Selected: English
+
+============================================================
+🎵 OTO.ini Smart Generator v3.8 (with Audio Conversion)
 ============================================================
 
 Generator loading…
 Generator loaded, loading encoding selector…
 Loading your good mood…
-
-============================================================
-🌐 Select UI language
-============================================================
-  1. 中文
-  2. English
-============================================================
-Enter language number (1/2): 2
-✅ English
 
 Detecting your software…
 💻 竟然是CMD，来吧，进我的生成器
@@ -304,6 +301,15 @@ Select sensitivity (1/2/3/4): 2
 ✅ Medium sensitivity (threshold: 0.01)
 
 ============================================================
+🌬️  Breath alias template
+============================================================
+💡 Use x as placeholder for number, e.g.: breath_x → breath_1, breath_2...
+   Examples: breath_x, br{x}, b{x}, breath, br, b
+============================================================
+Enter breath alias template (default: breath): breath_x
+✅ Breath alias template: breath_x
+
+============================================================
 🏷️  Alias custom mode
 ============================================================
   1. No alias processing (use filename directly)
@@ -325,39 +331,76 @@ Select alias mode (1/2/3/4/5/6): 1
 Select (1/2): 1
 ✅ Enabled: Romaji auto fix
 
+============================================================
+📋 character.txt generation
+============================================================
+  1. Enable character.txt and icon support
+  2. Disable (do not generate)
+============================================================
+Select (1/2): 1
+✅ Enabled: Generate character info file
+
+Enter singer name (name): Hatsune Miku
+✅ Singer name: Hatsune Miku
+
+Enter version (version, leave blank to skip): 1.0
+✅ Version: 1.0
+
+Enter website (web, leave blank to skip): https://example.com
+✅ Website: https://example.com
+
+============================================================
+📷 Voicebank icon selection
+============================================================
+Place icon file in voicebank directory, or enter full path
+Found 2 image files:
+   1. icon.png
+   2. avatar.jpg
+Select number (1-2): 1
+✅ Selected icon: icon.png
+
 ✅ FFmpeg ready, supports auto audio conversion
 
 📁 Default directory: D:\oto_voice
 
 📂 Scanning: D:\oto_voice
-📊 Found 50 files
+📊 Found 52 files
 ------------------------------------------------------------
-🔍 Scanning: 50/50
-✅ Scan complete: found 50 wav files
+🔍 Scanning: 52/52
+✅ Scan complete: found 52 wav files
 
-🔧 Processing 50 wav files
+🔧 Processing 52 wav files
 ------------------------------------------------------------
 
-[1/50] Processing: あ_i.wav
+[1/52] Processing: あ_i.wav
 ✅ Processed: あ_i.wav (alias: i, duration: 1200ms, silence: 120ms, offset: 120ms)
 
-[2/50] Processing: か_ka.wav
+[2/52] Processing: b1.wav
+   🌬️  Breath file: b1.wav -> alias: breath_1
+✅ Processed: b1.wav (alias: breath_1, duration: 300ms, silence: 0ms, offset: 0ms)
+
+[3/52] Processing: b2.wav
+   🌬️  Breath file: b2.wav -> alias: breath_2
+✅ Processed: b2.wav (alias: breath_2, duration: 280ms, silence: 0ms, offset: 0ms)
+
+[4/52] Processing: か_ka.wav
 ✅ Processed: か_ka.wav (alias: ka, duration: 950ms, silence: 80ms, offset: 80ms)
 
 ... (similar for remaining files)
 
 ✅ oto.ini generated: D:\oto_voice\oto.ini
-📊 50 entries
+📊 52 entries
 🔤 Encoding: shift-jis
+
+✅ character.txt generated: D:\oto_voice\character.txt
 
 ============================================================
 ✨ Generation complete!
 📁 oto.ini location: D:\oto_voice\oto.ini
+📋 character.txt location: D:\oto_voice\character.txt
 💡 Place this file with audio files in the same directory for UTAU
 ============================================================
 ```
-
-Follow the on-screen prompts – **all interactions are in Chinese/English based on your selection**. No programming knowledge required.
 
 ### Folder Structure Suggestion
 
@@ -366,8 +409,12 @@ your_voice_folder/
 ├── あ_i.wav
 ├── い_u.wav
 ├── か_ka.wav
-├── make_oto.py   ← Place the tool here (or anywhere, and specify the path when running)
-└── oto.ini       ← Generated automatically here
+├── b1.wav          ← Breath file (auto-detected)
+├── b2.wav          ← Breath file (auto-detected)
+├── icon.png        ← Voicebank icon (auto-scanned)
+├── make_oto.py     ← Place the tool here
+├── oto.ini         ← Generated automatically
+└── character.txt   ← Generated automatically (if enabled)
 ```
 
 ---
@@ -383,13 +430,16 @@ your_voice_folder/
 | **Conversion mode** | Keep permanently / Temporary (delete after generation to save space) |
 | **Alias mode** | 6 modes: none / add prefix / remove prefix / add suffix / remove suffix / delete character range |
 | **Silence sensitivity** | Low / Medium / High – choose lower sensitivity for recordings with background noise |
+| **Breath alias template** | Custom alias format for breath files, supports `x` placeholder for auto-numbering (e.g., `breath_x` → `breath_1`, `breath_2`...) |
 | **Scan mode** | Recursive scan (subfolders included) / Current directory only |
 | **Romaji auto-fix** | Automatically corrects labels like `short`/`long`/`vowel` to standard Romaji, supports Japanese Kana and Korean Hangul |
+| **character.txt generation** | Interactive generation of voicebank info file with name, version, website, icon |
 
 ---
 
 ## 📁 Output Example
 
+### oto.ini
 ```ini
 [#VERSION]
 VERSION=100
@@ -397,17 +447,25 @@ VERSION=100
 あ_i.wav=i,0,362,844,482,241
 い_u.wav=u,0,334,780,445,222
 か_ka.wav=ka,0,362,844,482,241
-き_ki.wav=ki,0,348,812,464,232
-く_ku.wav=ku,0,320,747,427,213
+b1.wav=breath_1,0,0,300,0,0
+b2.wav=breath_2,0,0,280,0,0
 ```
 
 Parameter meanings (left to right):
 - `Alias` – The name shown in UTAU
 - `offset` – Milliseconds skipped from the beginning (silence)
-- `consonant` – Consonant duration
-- `blank` – Blank section duration
-- `preutterance` – Pre-utterance time
-- `overlap` – Crossfade time
+- `consonant` – Consonant duration (breath: 0)
+- `blank` – Blank section duration (breath: entire duration)
+- `preutterance` – Pre-utterance time (breath: 0)
+- `overlap` – Crossfade time (breath: 0)
+
+### character.txt
+```ini
+name=Hatsune Miku
+version=1.0
+web=https://example.com
+image=icon.png
+```
 
 ---
 
@@ -448,6 +506,12 @@ A: When filenames contain non-standard labels like `short`, `long`, `vowel`, the
 
 **Q: What's the difference between UI language and voicebank language?**  
 A: UI language controls the display language of the tool itself (Chinese or English). Voicebank language controls which script the Romaji auto-fix feature recognizes (Japanese Kana or Korean Hangul).
+
+**Q: How does the breath alias template work?**  
+A: Enter a template containing `x`, and the tool will auto-number. For example, `breath_x` → `breath_1`, `breath_2`... If you don't include `x`, all breaths will use the same alias – the tool will warn you but let you proceed.
+
+**Q: What is character.txt for?**  
+A: It's the voicebank info file for UTAU, displaying singer name, version, website, and icon. Some UTAU front-end tools (like UTAU-Synth's voicebank list) read this file.
 
 ---
 
