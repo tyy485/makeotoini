@@ -11,7 +11,7 @@ import atexit
 import time
 from pathlib import Path
 
-VERSION = "3.8"
+VERSION = "3.9"
 
 class OtoGenerator:
     def __init__(self, wav_dir=None, output_path='oto.ini'):
@@ -49,6 +49,8 @@ class OtoGenerator:
         self.breath_counter = 0
         self.breath_has_placeholder = False
         self.breath_warned = False
+        self.remove_all_prefix = False
+        self.remove_all_suffix = False
         
         self.kana_to_romaji = {
             'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
@@ -204,6 +206,9 @@ class OtoGenerator:
                 'alias_slice_start': '请输入起始字符位置: ',
                 'alias_slice_end': '请输入结束字符位置: ',
                 'alias_slice_done': '删除第 {start} 到第 {end} 个字符',
+                'alias_slice_warning': '⚠️  文件名长度 ({length}) 小于结束位置 ({end})，切片将不生效',
+                'alias_remove_all_prefix': '是否删除所有匹配的前缀？(Y/N，默认N只删一次): ',
+                'alias_remove_all_suffix': '是否删除所有匹配的后缀？(Y/N，默认N只删一次): ',
                 'romaji_fix_select': '🔧 罗马音自动修复',
                 'romaji_fix_enable': '1. 启用自动修复 (将short/long等替换为正确罗马音)',
                 'romaji_fix_disable': '2. 禁用自动修复',
@@ -230,6 +235,12 @@ class OtoGenerator:
                 'character_image_choice': '请选择序号 (1-{count}): ',
                 'character_image_done': '已选择图标: {image}',
                 'character_image_skip': '未选择图标',
+                'preview_title': '📋 预览 oto.ini 配置',
+                'preview_count': '📊 共 {count} 条配置',
+                'preview_more': '... 还有 {count} 条未显示',
+                'preview_confirm': '是否确认生成 oto.ini？(Y/N): ',
+                'preview_cancel': '❌ 用户取消生成',
+                'preview_show': '{index:3}. {filename:30} → {alias:20} offset:{offset:4} consonant:{consonant:4} cutoff:{cutoff:4} pre:{preutterance:4} overlap:{overlap:4}',
                 'ffmpeg_ready': '✅ FFmpeg 已就绪，支持自动转换音频格式',
                 'ffmpeg_missing': '⚠️  FFmpeg 未安装，只支持wav格式',
                 'ffmpeg_hint': '💡 建议安装FFmpeg以支持更多音频格式',
@@ -390,6 +401,9 @@ class OtoGenerator:
                 'alias_slice_start': 'Enter start position: ',
                 'alias_slice_end': 'Enter end position: ',
                 'alias_slice_done': 'Remove from {start} to {end}',
+                'alias_slice_warning': '⚠️  Filename length ({length}) is less than end position ({end}), slice will not take effect',
+                'alias_remove_all_prefix': 'Remove all matching prefixes? (Y/N, default N only remove once): ',
+                'alias_remove_all_suffix': 'Remove all matching suffixes? (Y/N, default N only remove once): ',
                 'romaji_fix_select': '🔧 Romaji auto fix',
                 'romaji_fix_enable': '1. Enable auto fix (replace short/long with correct romaji)',
                 'romaji_fix_disable': '2. Disable auto fix',
@@ -416,6 +430,12 @@ class OtoGenerator:
                 'character_image_choice': 'Select number (1-{count}): ',
                 'character_image_done': 'Selected icon: {image}',
                 'character_image_skip': 'No icon selected',
+                'preview_title': '📋 Preview oto.ini configuration',
+                'preview_count': '📊 {count} entries',
+                'preview_more': '... {count} more entries not shown',
+                'preview_confirm': 'Confirm to generate oto.ini? (Y/N): ',
+                'preview_cancel': '❌ Generation cancelled by user',
+                'preview_show': '{index:3}. {filename:30} → {alias:20} offset:{offset:4} consonant:{consonant:4} cutoff:{cutoff:4} pre:{preutterance:4} overlap:{overlap:4}',
                 'ffmpeg_ready': '✅ FFmpeg ready, supports auto audio conversion',
                 'ffmpeg_missing': '⚠️  FFmpeg not installed, only wav format supported',
                 'ffmpeg_hint': '💡 Install FFmpeg for more audio formats',
@@ -847,13 +867,41 @@ class OtoGenerator:
                 self.alias_mode = 'remove_prefix'
                 prefix = input(self.t('alias_prefix_remove_input')).strip()
                 self.alias_prefix = prefix
+                while True:
+                    remove_all = input(self.t('alias_remove_all_prefix')).strip().upper()
+                    if remove_all == '' or remove_all == 'N':
+                        self.remove_all_prefix = False
+                        break
+                    elif remove_all == 'Y':
+                        self.remove_all_prefix = True
+                        break
+                    else:
+                        print(self.t('invalid_choice', range='Y 或 N'))
                 print(f"✅ {self.t('alias_remove_prefix_done', prefix=prefix)}")
+                if self.remove_all_prefix:
+                    print("   💡 将删除所有匹配的前缀")
+                else:
+                    print("   💡 只删除第一个匹配的前缀")
                 return
             elif choice == '4':
                 self.alias_mode = 'remove_suffix'
                 suffix = input(self.t('alias_suffix_remove_input')).strip()
                 self.alias_suffix = suffix
+                while True:
+                    remove_all = input(self.t('alias_remove_all_suffix')).strip().upper()
+                    if remove_all == '' or remove_all == 'N':
+                        self.remove_all_suffix = False
+                        break
+                    elif remove_all == 'Y':
+                        self.remove_all_suffix = True
+                        break
+                    else:
+                        print(self.t('invalid_choice', range='Y 或 N'))
                 print(f"✅ {self.t('alias_remove_suffix_done', suffix=suffix)}")
+                if self.remove_all_suffix:
+                    print("   💡 将删除所有匹配的后缀")
+                else:
+                    print("   💡 只删除第一个匹配的后缀")
                 return
             elif choice == '5':
                 self.alias_mode = 'add_suffix'
@@ -1017,12 +1065,19 @@ class OtoGenerator:
     
     def is_breath_file(self, filename):
         base_name = os.path.splitext(filename)[0].lower()
-        breath_patterns = ['br', '呼', '吸', 'breathe', 'breath']
-        for pattern in breath_patterns:
-            if pattern in base_name:
-                return True
-        if re.match(r'^b\d+$', base_name):
+        
+        if re.match(r'^br\d*$', base_name):
             return True
+        if re.match(r'^br_.*', base_name):
+            return True
+        
+        breath_words = ['呼', '吸', 'breathe', 'breath']
+        for word in breath_words:
+            if word in base_name.split('_'):
+                return True
+            if base_name == word:
+                return True
+        
         return False
     
     def get_breath_alias(self):
@@ -1182,36 +1237,49 @@ class OtoGenerator:
         base_name = os.path.splitext(filename)[0]
         
         if is_breath:
-            return self.get_breath_alias()
-        
-        if self.fix_romaji and self.language in ['japanese', 'korean']:
-            base_name = self.fix_romaji_in_filename(base_name)
+            alias = self.get_breath_alias()
+        else:
+            if self.fix_romaji and self.language in ['japanese', 'korean']:
+                alias = self.fix_romaji_in_filename(base_name)
+            else:
+                alias = base_name
         
         if self.alias_mode == 'none':
-            return base_name
+            return alias
         
         elif self.alias_mode == 'add_prefix':
-            return self.alias_prefix + base_name
+            return self.alias_prefix + alias
         
         elif self.alias_mode == 'remove_prefix':
-            if base_name.startswith(self.alias_prefix):
-                return base_name[len(self.alias_prefix):]
-            return base_name
+            if self.remove_all_prefix:
+                while alias.startswith(self.alias_prefix):
+                    alias = alias[len(self.alias_prefix):]
+                return alias
+            else:
+                if alias.startswith(self.alias_prefix):
+                    return alias[len(self.alias_prefix):]
+                return alias
         
         elif self.alias_mode == 'remove_suffix':
-            if base_name.endswith(self.alias_suffix):
-                return base_name[:-len(self.alias_suffix)]
-            return base_name
+            if self.remove_all_suffix:
+                while alias.endswith(self.alias_suffix):
+                    alias = alias[:-len(self.alias_suffix)]
+                return alias
+            else:
+                if alias.endswith(self.alias_suffix):
+                    return alias[:-len(self.alias_suffix)]
+                return alias
         
         elif self.alias_mode == 'add_suffix':
-            return base_name + self.alias_suffix
+            return alias + self.alias_suffix
         
         elif self.alias_mode == 'slice':
-            if len(base_name) < self.alias_end:
-                return base_name
-            return base_name[:self.alias_start] + base_name[self.alias_end:]
+            if len(alias) < self.alias_end:
+                print(self.t('alias_slice_warning', length=len(alias), end=self.alias_end))
+                return alias
+            return alias[:self.alias_start] + alias[self.alias_end:]
         
-        return base_name
+        return alias
     
     def is_audio_file(self, filepath):
         audio_extensions = {
@@ -1524,6 +1592,46 @@ class OtoGenerator:
         
         return params
     
+    def preview_oto(self):
+        if not self.notes:
+            print("❌ 没有数据可预览")
+            return False
+        
+        print("\n" + "="*60)
+        print(self.t('preview_title'))
+        print("="*60)
+        print(self.t('preview_count', count=len(self.notes)))
+        print("-"*60)
+        
+        show_count = min(20, len(self.notes))
+        for i in range(show_count):
+            note = self.notes[i]
+            print(self.t('preview_show',
+                index=i+1,
+                filename=note['filename'][:30],
+                alias=note['alias'][:20],
+                offset=note['offset'],
+                consonant=note['consonant'],
+                cutoff=note['cutoff'],
+                preutterance=note['preutterance'],
+                overlap=note['overlap']
+            ))
+        
+        if len(self.notes) > 20:
+            print(self.t('preview_more', count=len(self.notes) - 20))
+        
+        print("-"*60)
+        
+        while True:
+            choice = input(self.t('preview_confirm')).strip().upper()
+            if choice == 'Y':
+                return True
+            elif choice == 'N':
+                print(self.t('preview_cancel'))
+                return False
+            else:
+                print(self.t('invalid_choice', range='Y 或 N'))
+    
     def interactive_path_selection(self):
         print("\n" + "="*60)
         print(self.t('no_audio_found'))
@@ -1788,6 +1896,9 @@ class OtoGenerator:
             print("="*60)
             
             if not self.process_files(audio_files):
+                return False
+            
+            if not self.preview_oto():
                 return False
             
             if self.abnormal_files:
