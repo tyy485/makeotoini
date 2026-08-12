@@ -11,7 +11,143 @@ import atexit
 import time
 from pathlib import Path
 
-VERSION = "3.9"
+VERSION = "4.0"
+
+class ErrorHandler:
+    def __init__(self, ui_language='zh'):
+        self.ui_language = ui_language
+        
+        self.errors = {
+            'zh': {
+                'dir_not_found': {
+                    'msg': '❌ 找不到文件夹：{path}',
+                    'solution': '💡 检查路径对不对，或者重新选一个文件夹'
+                },
+                'no_permission': {
+                    'msg': '❌ 没有权限读取文件夹：{path}',
+                    'solution': '💡 换个文件夹试试，或者给这个文件夹开权限'
+                },
+                'no_audio': {
+                    'msg': '❌ 这个文件夹里没有音频文件',
+                    'solution': '💡 确认音频放在这里了，支持 wav/mp3/flac/m4a/ogg'
+                },
+                'wav_corrupt': {
+                    'msg': '❌ WAV 文件损坏：{filename}',
+                    'solution': '💡 重新录一下，或者用其他软件转成 wav'
+                },
+                'ffmpeg_missing': {
+                    'msg': '❌ 没装 FFmpeg，转不了格式',
+                    'solution': '💡 如果全是 wav 格式就不用管，否则去 ffmpeg.org 下载安装'
+                },
+                'ffmpeg_timeout': {
+                    'msg': '❌ 转码超时：{filename}',
+                    'solution': '💡 音频太大了，试试剪短一点，或者重新运行一次'
+                },
+                'encoding_error': {
+                    'msg': '❌ 有生僻字符写不进文件',
+                    'solution': '💡 自动换成 UTF-8 重新生成'
+                },
+                'user_cancel': {
+                    'msg': '👋 用户取消了',
+                    'solution': '💡 重新运行程序再来一次'
+                },
+                'unknown': {
+                    'msg': '❌ 出了点意外',
+                    'solution': '💡 重新运行试试，还不行就把截图发给我'
+                },
+                'no_data': {
+                    'msg': '❌ 没有数据可预览',
+                    'solution': '💡 先扫描音频文件再预览'
+                },
+                'abnormal_empty': {
+                    'msg': '❌ 清洗后文件名为空',
+                    'solution': '💡 重命名文件，去掉不可见字符'
+                },
+                'rename_fail': {
+                    'msg': '❌ 重命名失败：{filename}',
+                    'solution': '💡 检查文件是否被占用，或者手动重命名'
+                },
+                'ffprobe_missing': {
+                    'msg': '⚠️ 没装 ffprobe，时长读取可能不准',
+                    'solution': '💡 部分 WAV 可能读不到时长，建议安装 ffprobe'
+                }
+            },
+            'en': {
+                'dir_not_found': {
+                    'msg': '❌ Folder not found: {path}',
+                    'solution': '💡 Check the path, or choose another folder'
+                },
+                'no_permission': {
+                    'msg': '❌ No permission to read folder: {path}',
+                    'solution': '💡 Try another folder, or grant permission'
+                },
+                'no_audio': {
+                    'msg': '❌ No audio files found',
+                    'solution': '💡 Make sure audio files are there (wav/mp3/flac/m4a/ogg)'
+                },
+                'wav_corrupt': {
+                    'msg': '❌ Corrupted WAV: {filename}',
+                    'solution': '💡 Re-record it, or convert it again'
+                },
+                'ffmpeg_missing': {
+                    'msg': '❌ FFmpeg not installed',
+                    'solution': '💡 If you only use wav files, ignore this. Otherwise install FFmpeg'
+                },
+                'ffmpeg_timeout': {
+                    'msg': '❌ Conversion timeout: {filename}',
+                    'solution': '💡 Try a shorter audio file, or run again'
+                },
+                'encoding_error': {
+                    'msg': '❌ Cannot write special characters',
+                    'solution': '💡 Auto-switched to UTF-8, try again'
+                },
+                'user_cancel': {
+                    'msg': '👋 Cancelled by user',
+                    'solution': '💡 Run again when you are ready'
+                },
+                'unknown': {
+                    'msg': '❌ Something went wrong',
+                    'solution': '💡 Try again, if it still fails, send me a screenshot'
+                },
+                'no_data': {
+                    'msg': '❌ No data to preview',
+                    'solution': '💡 Scan audio files first'
+                },
+                'abnormal_empty': {
+                    'msg': '❌ Filename empty after cleaning',
+                    'solution': '💡 Rename the file, remove invisible characters'
+                },
+                'rename_fail': {
+                    'msg': '❌ Rename failed: {filename}',
+                    'solution': '💡 Check if file is in use, or rename manually'
+                },
+                'ffprobe_missing': {
+                    'msg': '⚠️ ffprobe not installed, duration may be wrong',
+                    'solution': '💡 Some WAV files may not read duration, install ffprobe'
+                }
+            }
+        }
+    
+    def set_language(self, ui_language):
+        self.ui_language = ui_language
+    
+    def get(self, error_key, **kwargs):
+        lang = self.ui_language
+        err_data = self.errors.get(lang, {}).get(error_key, self.errors['zh']['unknown'])
+        msg = err_data['msg'].format(**kwargs)
+        sol = err_data['solution'].format(**kwargs)
+        return f"{msg}\n{sol}"
+    
+    def get_msg(self, error_key, **kwargs):
+        lang = self.ui_language
+        err_data = self.errors.get(lang, {}).get(error_key, self.errors['zh']['unknown'])
+        return err_data['msg'].format(**kwargs)
+    
+    def get_solution(self, error_key, **kwargs):
+        lang = self.ui_language
+        err_data = self.errors.get(lang, {}).get(error_key, self.errors['zh']['unknown'])
+        return err_data['solution'].format(**kwargs)
+
 
 class OtoGenerator:
     def __init__(self, wav_dir=None, output_path='oto.ini'):
@@ -28,6 +164,7 @@ class OtoGenerator:
         self.clean_mode = 'ask'
         self.temp_mode = False
         self.silence_threshold = 0.01
+        self.silence_scan_duration = 100
         self.running = True
         self.cleanup_done = False
         self.force_reconvert = False
@@ -51,6 +188,7 @@ class OtoGenerator:
         self.breath_warned = False
         self.remove_all_prefix = False
         self.remove_all_suffix = False
+        self.err = ErrorHandler(self.ui_language)
         
         self.kana_to_romaji = {
             'あ': 'a', 'い': 'i', 'う': 'u', 'え': 'e', 'お': 'o',
@@ -242,17 +380,13 @@ class OtoGenerator:
                 'preview_cancel': '❌ 用户取消生成',
                 'preview_show': '{index:3}. {filename:30} → {alias:20} offset:{offset:4} consonant:{consonant:4} cutoff:{cutoff:4} pre:{preutterance:4} overlap:{overlap:4}',
                 'ffmpeg_ready': '✅ FFmpeg 已就绪，支持自动转换音频格式',
-                'ffmpeg_missing': '⚠️  FFmpeg 未安装，只支持wav格式',
                 'ffmpeg_hint': '💡 建议安装FFmpeg以支持更多音频格式',
-                'ffprobe_missing': '⚠️  ffprobe 未安装，时长读取可能回退到500ms',
                 'default_dir': '📁 默认目录: {path}',
                 'scanning': '📂 扫描目录: {directory}',
                 'scan_files': '📊 共发现 {count} 个文件',
                 'scan_progress': '🔍 扫描进度: {current}/{total}',
                 'scan_found_audio': '🎵 发现非wav音频: {filename}',
                 'convert_success': '✅ 转换成功: {filename}',
-                'convert_fail': '❌ 转换失败: {filename}',
-                'convert_skip': '⚠️  跳过文件: {filename} (转换失败)',
                 'converted_generated': '💡 已生成: {filename}',
                 'scan_complete': '✅ 扫描完成: 找到 {count} 个wav文件',
                 'converted_count': '   🔄 转换了 {count} 个文件为wav',
@@ -262,22 +396,17 @@ class OtoGenerator:
                 'abnormal_detected': '⚠️  检测到异常字符: {filename}',
                 'abnormal_choice': '输入 Y 剔除异常字符，输入 N 跳过此文件 (Y/N): ',
                 'abnormal_renamed': '✅ 已重命名: {old} -> {new}',
-                'abnormal_rename_fail': '❌ 重命名失败: {error}',
-                'abnormal_empty': '❌ 清洗后文件名为空，跳过此文件',
                 'abnormal_skip': '⏭️  跳过文件: {filename}',
                 'abnormal_invalid': '❌ 无效输入，请输入 Y 或 N',
                 'abnormal_auto_clean': '✅ 自动清洗: {old} -> {new}',
-                'abnormal_auto_fail': '❌ 清洗失败: {error}',
                 'abnormal_auto_empty': '⚠️  清洗后文件名为空，跳过: {filename}',
                 'abnormal_skip_all': '⏭️  跳过异常文件: {filename}',
                 'processed': '✅ 已处理: {filename} (别名: {alias}, 时长: {duration}ms, 静音: {silence}ms, offset: {offset}ms)',
                 'breath_detected': '   🌬️  呼吸声文件: {filename} -> 别名: {alias}',
                 'romaji_fix': '   🔧 修复罗马音: {old} -> {new}',
-                'no_wav': '❌ 没有可用的wav文件！',
                 'generate_success': '✅ oto.ini 已生成: {path}',
                 'generate_count': '📊 共 {count} 条配置',
                 'generate_encoding': '🔤 编码格式: {encoding}',
-                'generate_fail': '❌ 生成失败: {error}',
                 'character_generated': '✅ character.txt 已生成: {path}',
                 'cleanup_temp': '🧹 清理临时wav文件...',
                 'cleanup_deleted': '   ✅ 删除: {filename}',
@@ -289,13 +418,10 @@ class OtoGenerator:
                 'complete': '\n✨ 生成完成！',
                 'complete_path': '📁 oto.ini 位置: {path}',
                 'complete_hint': '💡 请将此文件与音频文件放在同一目录下供UTAU使用',
-                'dir_found': '📁 默认目录: {path}',
                 'dir_current': '\n💡 当前目录找到 {count} 个可用音频文件',
                 'dir_hint': '   如果想处理其他目录，可以输入新路径\n   直接按回车继续使用当前目录\n   输入 \'q\' 退出程序',
                 'dir_input': '\n📁 请输入新路径（或按回车继续）: ',
                 'dir_switched': '✅ 切换到新目录: {path}',
-                'dir_no_audio': '⚠️  目录 \'{path}\' 下没有音频文件，继续使用当前目录',
-                'dir_invalid': '⚠️  无效路径，继续使用当前目录',
                 'dir_processing': '\n📁 处理目录: {path}',
                 'exit': '👋 程序退出',
                 'invalid_choice': '❌ 无效选择，请输入 {range}',
@@ -307,8 +433,6 @@ class OtoGenerator:
                 'no_audio_menu': '请选择操作:\n  1. 输入音频文件夹路径（相对或绝对路径）\n  2. 将本程序移动到音频文件夹所在目录\n  3. 退出程序',
                 'no_audio_hint': '💡 提示: 支持以下音频格式自动转wav\n   MP3, FLAC, M4A, AAC, OGG, WMA, AIFF, OPUS 等',
                 'no_audio_input': '📁 请输入文件夹路径: ',
-                'no_audio_error': '❌ 目录 \'{path}\' 下没有可用的音频文件',
-                'no_audio_check': '💡 请检查目录是否包含支持的音频格式',
                 'path_invalid': '❌ 无效路径: \'{path}\'',
                 'path_hint': '💡 请确保路径正确且目录存在',
                 'drag_hint': '💡 提示: 你可以拖拽文件夹到命令行窗口，或直接输入路径',
@@ -437,17 +561,13 @@ class OtoGenerator:
                 'preview_cancel': '❌ Generation cancelled by user',
                 'preview_show': '{index:3}. {filename:30} → {alias:20} offset:{offset:4} consonant:{consonant:4} cutoff:{cutoff:4} pre:{preutterance:4} overlap:{overlap:4}',
                 'ffmpeg_ready': '✅ FFmpeg ready, supports auto audio conversion',
-                'ffmpeg_missing': '⚠️  FFmpeg not installed, only wav format supported',
                 'ffmpeg_hint': '💡 Install FFmpeg for more audio formats',
-                'ffprobe_missing': '⚠️  ffprobe not installed, duration may fallback to 500ms',
                 'default_dir': '📁 Default directory: {path}',
                 'scanning': '📂 Scanning: {directory}',
                 'scan_files': '📊 Found {count} files',
                 'scan_progress': '🔍 Scanning: {current}/{total}',
                 'scan_found_audio': '🎵 Found non-wav audio: {filename}',
                 'convert_success': '✅ Converted: {filename}',
-                'convert_fail': '❌ Conversion failed: {filename}',
-                'convert_skip': '⚠️  Skipped: {filename} (conversion failed)',
                 'converted_generated': '💡 Generated: {filename}',
                 'scan_complete': '✅ Scan complete: found {count} wav files',
                 'converted_count': '   🔄 Converted {count} files to wav',
@@ -457,22 +577,17 @@ class OtoGenerator:
                 'abnormal_detected': '⚠️  Abnormal characters detected: {filename}',
                 'abnormal_choice': 'Enter Y to remove characters, N to skip (Y/N): ',
                 'abnormal_renamed': '✅ Renamed: {old} -> {new}',
-                'abnormal_rename_fail': '❌ Rename failed: {error}',
-                'abnormal_empty': '❌ Filename empty after cleaning, skipped',
                 'abnormal_skip': '⏭️  Skipped: {filename}',
                 'abnormal_invalid': '❌ Invalid input, enter Y or N',
                 'abnormal_auto_clean': '✅ Auto cleaned: {old} -> {new}',
-                'abnormal_auto_fail': '❌ Cleaning failed: {error}',
                 'abnormal_auto_empty': '⚠️  Empty filename after cleaning, skipped: {filename}',
                 'abnormal_skip_all': '⏭️  Skipped abnormal file: {filename}',
                 'processed': '✅ Processed: {filename} (alias: {alias}, duration: {duration}ms, silence: {silence}ms, offset: {offset}ms)',
                 'breath_detected': '   🌬️  Breath file: {filename} -> alias: {alias}',
                 'romaji_fix': '   🔧 Fixed romaji: {old} -> {new}',
-                'no_wav': '❌ No wav files available!',
                 'generate_success': '✅ oto.ini generated: {path}',
                 'generate_count': '📊 {count} entries',
                 'generate_encoding': '🔤 Encoding: {encoding}',
-                'generate_fail': '❌ Generation failed: {error}',
                 'character_generated': '✅ character.txt generated: {path}',
                 'cleanup_temp': '🧹 Cleaning temporary wav files...',
                 'cleanup_deleted': '   ✅ Deleted: {filename}',
@@ -484,13 +599,10 @@ class OtoGenerator:
                 'complete': '\n✨ Generation complete!',
                 'complete_path': '📁 oto.ini location: {path}',
                 'complete_hint': '💡 Place this file with audio files in the same directory for UTAU',
-                'dir_found': '📁 Default directory: {path}',
                 'dir_current': '\n💡 Found {count} audio files in current directory',
                 'dir_hint': '   Enter new path to process other directory\n   Press Enter to continue with current directory\n   Enter \'q\' to exit',
                 'dir_input': '\n📁 Enter new path (or press Enter to continue): ',
                 'dir_switched': '✅ Switched to: {path}',
-                'dir_no_audio': '⚠️  No audio files in \'{path}\', continuing with current directory',
-                'dir_invalid': '⚠️  Invalid path, continuing with current directory',
                 'dir_processing': '\n📁 Processing: {path}',
                 'exit': '👋 Exiting',
                 'invalid_choice': '❌ Invalid choice, enter {range}',
@@ -502,8 +614,6 @@ class OtoGenerator:
                 'no_audio_menu': 'Select action:\n  1. Enter audio folder path\n  2. Move program to audio folder directory\n  3. Exit',
                 'no_audio_hint': '💡 Supports auto conversion from: MP3, FLAC, M4A, AAC, OGG, WMA, AIFF, OPUS etc.',
                 'no_audio_input': '📁 Enter folder path: ',
-                'no_audio_error': '❌ No audio files in \'{path}\'',
-                'no_audio_check': '💡 Check if directory contains supported audio formats',
                 'path_invalid': '❌ Invalid path: \'{path}\'',
                 'path_hint': '💡 Make sure the path is correct and directory exists',
                 'drag_hint': '💡 Drag folder to command window, or enter path directly',
@@ -544,8 +654,7 @@ class OtoGenerator:
             self.ffmpeg_available = False
             
         if not self.ffmpeg_available:
-            print(self.t('ffmpeg_missing'))
-            print(self.t('ffmpeg_hint'))
+            print(self.err.get('ffmpeg_missing'))
         
         return self.ffmpeg_available
     
@@ -563,6 +672,9 @@ class OtoGenerator:
             self.ffprobe_available = (result.returncode == 0)
         except:
             self.ffprobe_available = False
+        
+        if not self.ffprobe_available:
+            print(self.err.get('ffprobe_missing'))
         
         return self.ffprobe_available
     
@@ -599,14 +711,16 @@ class OtoGenerator:
             
             if choice == '1' or choice.lower() in ['zh', '中文']:
                 self.ui_language = 'zh'
+                self.err.set_language('zh')
                 print("✅ 已选择: 中文")
                 return
             elif choice == '2' or choice.lower() in ['en', 'english']:
                 self.ui_language = 'en'
+                self.err.set_language('en')
                 print("✅ Selected: English")
                 return
             else:
-                print("❌ 无效选择，请输入 1 或 2 / Invalid choice, enter 1 or 2")
+                print(self.t('invalid_choice', range='1 或 2 / 1 or 2'))
                 continue
     
     def select_language(self):
@@ -1066,9 +1180,7 @@ class OtoGenerator:
     def is_breath_file(self, filename):
         base_name = os.path.splitext(filename)[0].lower()
         
-        if re.match(r'^br\d*$', base_name):
-            return True
-        if re.match(r'^br_.*', base_name):
+        if re.match(r'^br(_?\d+)?$', base_name):
             return True
         
         breath_words = ['呼', '吸', 'breathe', 'breath']
@@ -1149,6 +1261,24 @@ class OtoGenerator:
         
         base_name = os.path.splitext(filename)[0]
         ext = os.path.splitext(filename)[1]
+        
+        if '_' in base_name:
+            parts = base_name.split('_', 1)
+            kana_part = parts[0]
+            romaji_part = parts[1] if len(parts) > 1 else ''
+            
+            if self.language == 'japanese':
+                script = self.extract_kana(kana_part)
+                if script:
+                    fixed_kana = self.kana_to_romaji_str(script)
+                    new_base = fixed_kana + '_' + romaji_part
+                    return new_base + ext
+            elif self.language == 'korean':
+                script = self.extract_hangul(kana_part)
+                if script:
+                    fixed_kana = self.hangul_to_roman_str(script)
+                    new_base = fixed_kana + '_' + romaji_part
+                    return new_base + ext
         
         if self.language == 'japanese':
             script = self.extract_kana(base_name)
@@ -1343,7 +1473,8 @@ class OtoGenerator:
                 chunk_size = min(1024, frames)
                 silent_samples = 0
                 max_amplitude = 0
-                scan_duration = min(rate // 10, frames)
+                scan_samples = int(rate * self.silence_scan_duration / 1000)
+                scan_duration = min(scan_samples, frames)
                 
                 for _ in range(0, scan_duration, chunk_size):
                     data = wf.readframes(chunk_size)
@@ -1379,53 +1510,69 @@ class OtoGenerator:
         except:
             return 0
     
-    def convert_to_wav(self, audio_path):
+    def convert_to_wav(self, audio_path, retry=2):
         if not self.check_ffmpeg():
             return None
         
-        base_name = os.path.splitext(audio_path)[0]
-        wav_path = base_name + '.wav'
+        if self.temp_mode:
+            temp_dir = tempfile.gettempdir()
+            base_name = os.path.splitext(os.path.basename(audio_path))[0]
+            wav_path = os.path.join(temp_dir, base_name + '.wav')
+        else:
+            base_name = os.path.splitext(audio_path)[0]
+            wav_path = base_name + '.wav'
         
         if not self.force_reconvert and os.path.exists(wav_path) and self.is_wav_file(wav_path):
             if os.path.getmtime(wav_path) >= os.path.getmtime(audio_path):
                 return wav_path
         
-        try:
-            print(self.t('scan_found_audio', filename=os.path.basename(audio_path)))
-            
-            cmd = [
-                'ffmpeg',
-                '-i', audio_path,
-                '-ar', '44100',
-                '-ac', '1',
-                '-sample_fmt', 's16',
-                '-y',
-                wav_path
-            ]
-            
-            result = subprocess.run(
-                cmd,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                timeout=30
-            )
-            
-            if result.returncode == 0 and os.path.exists(wav_path) and self.is_wav_file(wav_path):
-                self.converted_files.append(audio_path)
-                if self.temp_mode:
-                    self.temp_wav_files.append(wav_path)
-                print(self.t('convert_success', filename=os.path.basename(wav_path)))
-                return wav_path
-            else:
-                print(self.t('convert_fail', filename=os.path.basename(audio_path)))
-                return None
+        for attempt in range(retry):
+            try:
+                print(self.t('scan_found_audio', filename=os.path.basename(audio_path)))
                 
-        except subprocess.TimeoutExpired:
-            print(self.t('convert_fail', filename=os.path.basename(audio_path)) + " (timeout)")
-            return None
-        except Exception as e:
-            print(self.t('convert_fail', filename=os.path.basename(audio_path)) + f" ({e})")
-            return None
+                cmd = [
+                    'ffmpeg',
+                    '-i', audio_path,
+                    '-ar', '44100',
+                    '-ac', '1',
+                    '-sample_fmt', 's16',
+                    '-y',
+                    wav_path
+                ]
+                
+                result = subprocess.run(
+                    cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=30
+                )
+                
+                if result.returncode == 0 and os.path.exists(wav_path) and self.is_wav_file(wav_path):
+                    self.converted_files.append(audio_path)
+                    if self.temp_mode:
+                        self.temp_wav_files.append(wav_path)
+                    print(self.t('convert_success', filename=os.path.basename(wav_path)))
+                    return wav_path
+                else:
+                    if attempt < retry - 1:
+                        print(f"⏰ 转码失败，重试 {attempt+2}/{retry}")
+                        continue
+                    print(self.err.get('ffmpeg_timeout', filename=os.path.basename(audio_path)))
+                    return None
+                    
+            except subprocess.TimeoutExpired:
+                if attempt < retry - 1:
+                    print(f"⏰ 超时，重试 {attempt+2}/{retry}")
+                    continue
+                print(self.err.get('ffmpeg_timeout', filename=os.path.basename(audio_path)))
+                return None
+            except Exception as e:
+                if attempt < retry - 1:
+                    continue
+                print(self.err.get('ffmpeg_missing'))
+                return None
+        
+        return None
     
     def scan_audio_files(self, directory):
         all_files = []
@@ -1537,7 +1684,7 @@ class OtoGenerator:
                 except:
                     pass
             
-            print(self.t('generate_fail', error=f"无法读取时长: {os.path.basename(wav_path)}"))
+            print(self.err.get('wav_corrupt', filename=os.path.basename(wav_path)))
             return 500
     
     def estimate_oto_params(self, wav_path):
@@ -1594,7 +1741,7 @@ class OtoGenerator:
     
     def preview_oto(self):
         if not self.notes:
-            print("❌ 没有数据可预览")
+            print(self.err.get('no_data'))
             return False
         
         print("\n" + "="*60)
@@ -1627,7 +1774,7 @@ class OtoGenerator:
             if choice == 'Y':
                 return True
             elif choice == 'N':
-                print(self.t('preview_cancel'))
+                print(self.err.get('user_cancel'))
                 return False
             else:
                 print(self.t('invalid_choice', range='Y 或 N'))
@@ -1656,12 +1803,10 @@ class OtoGenerator:
                 if audio_files:
                     return user_input, audio_files
                 else:
-                    print(self.t('no_audio_error', path=user_input))
-                    print(self.t('no_audio_check'))
+                    print(self.err.get('no_audio'))
                     continue
             else:
-                print(self.t('path_invalid', path=user_input))
-                print(self.t('path_hint'))
+                print(self.err.get('dir_not_found', path=user_input))
                 continue
     
     def is_valid_directory(self, path):
@@ -1672,7 +1817,7 @@ class OtoGenerator:
     
     def process_files(self, wav_files):
         if not wav_files:
-            print(self.t('no_wav'))
+            print(self.err.get('no_audio'))
             return False
         
         print(f"\n{self.t('processing_start', count=len(wav_files))}")
@@ -1704,10 +1849,10 @@ class OtoGenerator:
                                     filename = new_name
                                     wav_path = new_path
                                 except Exception as e:
-                                    print(self.t('abnormal_rename_fail', error=e))
+                                    print(self.err.get('rename_fail', filename=filename))
                                     continue
                             else:
-                                print(self.t('abnormal_empty'))
+                                print(self.err.get('abnormal_empty'))
                                 continue
                             break
                         elif choice == 'N':
@@ -1730,7 +1875,7 @@ class OtoGenerator:
                             filename = new_name
                             wav_path = new_path
                         except Exception as e:
-                            print(self.t('abnormal_auto_fail', error=e))
+                            print(self.err.get('rename_fail', filename=filename))
                     elif not new_filename:
                         print(self.t('abnormal_auto_empty', filename=filename))
                         continue
@@ -1763,7 +1908,7 @@ class OtoGenerator:
     
     def generate_oto(self):
         if not self.notes:
-            print(self.t('generate_fail', error="没有有效数据"))
+            print(self.err.get('no_data'))
             return False
         
         try:
@@ -1782,8 +1927,12 @@ class OtoGenerator:
             print(self.t('generate_count', count=len(self.notes)))
             print(self.t('generate_encoding', encoding=self.encoding))
             return True
+        except UnicodeEncodeError as e:
+            print(self.err.get('encoding_error'))
+            self.encoding = 'utf-8'
+            return self.generate_oto()
         except Exception as e:
-            print(self.t('generate_fail', error=e))
+            print(self.err.get('unknown'))
             return False
     
     def generate_character_file(self):
@@ -1805,7 +1954,7 @@ class OtoGenerator:
             
             print(f"\n{self.t('character_generated', path=os.path.abspath(character_path))}")
         except Exception as e:
-            print(f"❌ 生成 character.txt 失败: {e}")
+            print(self.err.get('unknown'))
     
     def cleanup_temp_files(self):
         if self.cleanup_done:
@@ -1854,16 +2003,12 @@ class OtoGenerator:
             if self.ffmpeg_available:
                 print(self.t('ffmpeg_ready'))
             else:
-                print(self.t('ffmpeg_missing'))
                 print(self.t('ffmpeg_hint'))
-            
-            if not self.ffprobe_available:
-                print(self.t('ffprobe_missing'))
             
             if self.wav_dir is None:
                 self.wav_dir = os.getcwd()
             
-            print(f"\n{self.t('dir_found', path=os.path.abspath(self.wav_dir))}")
+            print(f"\n{self.t('default_dir', path=os.path.abspath(self.wav_dir))}")
             
             audio_files = self.scan_audio_files(self.wav_dir)
             
@@ -1888,9 +2033,9 @@ class OtoGenerator:
                             audio_files = new_audio
                             print(self.t('dir_switched', path=self.wav_dir))
                         else:
-                            print(self.t('dir_no_audio', path=user_input))
+                            print(self.err.get('no_audio'))
                     else:
-                        print(self.t('dir_invalid'))
+                        print(self.err.get('dir_not_found', path=user_input))
             
             print(f"\n{self.t('dir_processing', path=os.path.abspath(self.wav_dir))}")
             print("="*60)
