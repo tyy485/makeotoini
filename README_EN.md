@@ -26,17 +26,18 @@
 ## ✨ Features
 
 - 🎯 **One-click generation** — Scan .wav files, auto-estimate parameters, output standard oto.ini
-- 🔄 **Auto-transcoding** — Convert MP3 / FLAC / M4A / OGG etc. to .wav automatically (requires FFmpeg)
+- 🔄 **Auto-transcoding** — Convert MP3 / FLAC / M4A / OGG etc. to .wav automatically (requires FFmpeg), with retry mechanism
 - 📦 **Zero dependencies** — Uses only Python standard library; no `pip install` needed
 - 🧹 **Abnormal filename cleaning** — Remove invisible characters to avoid UTAU errors
 - 🏷️ **Batch alias processing** — Add/remove prefixes/suffixes, delete character ranges – 6 modes available, supports removing all matches
 - 🔇 **Silence detection** — Automatically locate offset to reduce breath-cut errors
-- 🌬️ **Breath file auto-identification** — Automatically detects files named with `br`/`br_`/`呼`/`吸`/`breathe`/`breath`, assigns aliases with custom template (supports `x` placeholder for numbering)
+- 🌬️ **Breath file auto-identification** — Automatically detects files named with `br`/`br_数字`/`呼`/`吸`/`breathe`/`breath`, assigns aliases with custom template (supports `x` placeholder for numbering)
 - 🔧 **Romaji auto-fix** — Correct common labels like `short`/`long`/`vowel` to standard Romaji (supports Japanese Kana and Korean Hangul)
 - 🌍 **Multilingual voicebank support** — Choose from 日本語 / 中文 / 한국어 / English
 - 🌐 **Bilingual UI** — Interface supports Chinese/English toggle
 - 📋 **character.txt generation** — Interactive generation of voicebank info file with name, version, website, icon (auto-scans directory images)
 - 👁️ **Preview confirmation mode** — Preview oto.ini configuration before generation, confirm before writing to file
+- 🛡️ **Smart error handling** — Common errors with solutions, auto-retry on conversion failure, auto-switch to UTF-8 on encoding error
 - 🌍 **Cross-platform** — Works on Windows / macOS / Linux / Termux (Android)
 - 🔤 **Encoding options** — Choose Shift-JIS / GB2312 / UTF-8 as needed
 
@@ -224,7 +225,7 @@ python make_oto.py
 ✅ Selected: English
 
 ============================================================
-🎵 OTO.ini Smart Generator v3.9 (with Audio Conversion)
+🎵 OTO.ini Smart Generator v4.0 (with Audio Conversion)
 ============================================================
 
 Generator loading…
@@ -330,8 +331,7 @@ Select alias mode (1/2/3/4/5/6): 1
   1. Enable auto fix (replace short/long with correct romaji)
   2. Disable auto fix
 ============================================================
-Select (1/2): 1
-✅ Enabled: Romaji auto fix
+Select (1/2): 1✅ Enabled: Romaji auto fix
 
 ============================================================
 📋 character.txt generation
@@ -534,6 +534,12 @@ A: When removing prefixes/suffixes, the tool asks whether to remove all matches.
 
 **Q: What is character.txt for?**  
 A: It's the voicebank info file for UTAU, displaying singer name, version, website, and icon. Some UTAU front-end tools (like UTAU-Synth's voicebank list) read this file.
+
+**Q: Will conversion retry on failure?**  
+A: Yes. The tool automatically retries up to 2 times, and gives clear feedback if it still fails.
+
+**Q: What happens on encoding errors?**  
+A: The tool automatically switches to UTF-8 and regenerates, no manual intervention needed.
 
 ---
 
