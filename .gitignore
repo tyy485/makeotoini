@@ -1,0 +1,13 @@
+*.moic
+*.log
+story.txt
+*.frq
+*.tmp.wav
+temp_*.wav
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+Thumbs.db
+.makeprogress/
